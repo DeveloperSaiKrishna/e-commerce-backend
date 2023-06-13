@@ -25,20 +25,22 @@ app.get("/", (req, res) => {
 app.post("/register", (req, res) => {
   const { email, username, password, confirm_password } = req.body;
   if (!email || !username || !password || !confirm_password) {
-    return res.status(400).send("Please enter all fields!");
+    return res.status(400).json({ message: "Please enter all fields!" });
   }
   connection.query(
     "SELECT email FROM users WHERE email=?",
     [email],
     async (err, result) => {
       if (err) {
-        res.json(err);
+        res.status(401).json(err);
       }
 
       if (result.length > 0) {
-        res.send("Email already taken!");
+        res.status(401).json({ message: "Email already taken!" });
       } else if (password !== confirm_password) {
-        res.send("Password should be matched with confirm passowrd");
+        res.status(401).json({
+          message: "Password should be matched with confirm passowrd",
+        });
       } else {
         const encrypted_password = await bcryptjs.hash(password, 8);
         connection.query(
@@ -50,7 +52,7 @@ app.post("/register", (req, res) => {
           },
           (error, result) => {
             if (error) {
-              res.json(error);
+              res.status(401).json(error);
             } else {
               res.json({ message: "Registration Success!" });
             }
@@ -65,7 +67,9 @@ app.post("/login", (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).send("Please enter your Email and Password");
+      return res
+        .status(400)
+        .json({ message: "Please enter your Email and Password" });
     }
 
     connection.query(
@@ -74,10 +78,12 @@ app.post("/login", (req, res) => {
       async (error, result) => {
         console.log(result);
         if (result <= 0) {
-          return res.status(401).send("Please email and password");
+          return res.status(401).json({ message: "Please email and password" });
         } else {
           if (!(await bcryptjs.compare(password, result[0].password))) {
-            return res.status(401).send("Email or Password Incorrect");
+            return res
+              .status(401)
+              .json({ message: "Email or Password Incorrect" });
           } else {
             const id = result[0].id;
             const token = jwt.sign({ id }, JWT_SECRET, {
@@ -103,7 +109,7 @@ app.post("/check_token", async (req, res) => {
   const { access_token } = req.body;
 
   if (!access_token) {
-    return res.send("Please add token");
+    return res.status(401).json({ message: "Please add token" });
   }
 
   try {
