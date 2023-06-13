@@ -9,7 +9,7 @@ const JWT_EXPIRES_IN = "90d";
 const JWT_COOKIE_EXPIRES = "90";
 
 const app = express();
-const port = 3000;
+const port = 8000;
 
 app.use(express.json());
 app.use(
