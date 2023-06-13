@@ -24,6 +24,9 @@ app.get("/", (req, res) => {
 
 app.post("/register", (req, res) => {
   const { email, username, password, confirm_password } = req.body;
+  if (!email || !username || !password || !confirm_password) {
+    return res.status(400).send("Please enter all fields!");
+  }
   connection.query(
     "SELECT email FROM users WHERE email=?",
     [email],
@@ -49,7 +52,7 @@ app.post("/register", (req, res) => {
             if (error) {
               res.json(error);
             } else {
-              res.json(result);
+              res.json({ message: "Registration Success!" });
             }
           }
         );
@@ -96,34 +99,31 @@ app.post("/login", (req, res) => {
   }
 });
 
-app.post("/is_logged", async (req, res) => {
+app.post("/check_token", async (req, res) => {
   const { access_token } = req.body;
 
   if (!access_token) {
     return res.send("Please add token");
   }
 
-  const decode = await promisify(jwt.verify)(
-    access_token,
-    JWT_SECRET,
-    async (err, decoded) => {
-      await console.log(err, decoded);
-    }
-  );
+  try {
+    const decode = await promisify(jwt.verify)(access_token, JWT_SECRET);
 
-  connection.query(
-    "SELECT * FROM users WHERE id=?",
-    [decode.id],
-    (error, result) => {
-      if (error) {
-        return res.json(error);
+    connection.query(
+      "SELECT * FROM users WHERE id=?",
+      [decode.id],
+      (error, result) => {
+        if (error) {
+          return res.json(error);
+        }
+
+        const { id, email, username } = result[0];
+        res.json({ id, email, username, access_token });
       }
-
-      // const { id, email, username } = result[0];
-      // res.json({ id, email, username });
-      res.json({ is_logged_in: true });
-    }
-  );
+    );
+  } catch (error) {
+    res.status(401).json({ message: "Invalid Token" });
+  }
 });
 
 app.get("/products", (req, res) => {
@@ -134,6 +134,36 @@ app.get("/products", (req, res) => {
       res.json(rows);
     }
   });
+});
+
+app.post("/order", (req, res) => {
+  const { title, image, price, user_id } = req.body;
+  if (!title || !image || !price || !user_id) {
+    return res.status(401).json({ message: "Please enter all fields!" });
+  }
+
+  connection.query(
+    "INSERT INTO orders set ?",
+    { title, image, price, user_id },
+    (error, result) => {
+      if (error) {
+        res.json(error);
+      } else {
+        res.json({ message: "Order Placed Successfully!" });
+      }
+    }
+  );
+});
+
+app.post("/my_orders", (req, res) => {
+  const { user_id } = req.body;
+  connection.query(
+    "SELECT * FROM orders WHERE user_id=?",
+    [user_id],
+    async (error, result) => {
+      res.status(200).json(result);
+    }
+  );
 });
 
 app.listen(port, () => {
