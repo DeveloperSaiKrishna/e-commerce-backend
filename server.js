@@ -91,6 +91,7 @@ app.post("/login", (req, res) => {
             });
             // console.log(token);
             res.json({
+              user_id: id,
               email: result[0].email,
               username: result[0].username,
               access_token: token,
@@ -143,22 +144,33 @@ app.get("/products", (req, res) => {
 });
 
 app.post("/order", (req, res) => {
-  const { title, image, price, user_id } = req.body;
-  if (!title || !image || !price || !user_id) {
-    return res.status(401).json({ message: "Please enter all fields!" });
-  }
-
-  connection.query(
-    "INSERT INTO orders set ?",
-    { title, image, price, user_id },
-    (error, result) => {
-      if (error) {
-        res.json(error);
-      } else {
-        res.json({ message: "Order Placed Successfully!" });
-      }
+  let response = {
+    status: 200,
+    message: "",
+  };
+  req.body.forEach((item) => {
+    const { title, image, price, user_id } = item;
+    if (!title || !image || !price || !user_id) {
+      return res.status(401).json({ message: "Please enter all fields!" });
     }
-  );
+
+    connection.query(
+      "INSERT INTO orders set ?",
+      { title, image, price, user_id },
+      (error, result) => {
+        if (error) {
+          response.status = 400;
+        } else {
+          response.status = 200;
+        }
+      }
+    );
+  });
+  if (response.status === 200) {
+    res.status(200).json({ message: "Success" });
+  } else {
+    res.status(400).json({ message: "Error" });
+  }
 });
 
 app.post("/my_orders", (req, res) => {
